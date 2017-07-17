@@ -23,7 +23,6 @@ class CodeBustersReferee
 			}
 		}
 		board.DeclareWinner();
-		Console.ReadKey(true);
 	}
 
 	class Board
@@ -323,7 +322,6 @@ class CodeBustersReferee
 
 	class Ghost : GameObject
 	{
-		public static readonly int RELEASE_RANGE = 1600;
 		public static readonly int ESCAPE_SPEED = 400;
 
 		public int Stamina { get; set; }

@@ -4,7 +4,7 @@ The referees are not ported from the code used on the servers, so correctness ca
 
 The referees support some basic graphic feedback.
 To activate it, pass a folder (or `.` for the current directory) as first command line argument and you will get an image for each turn.
-This is not recommended when playing multiple turns, as it is slow and images will be replaced by later runs.
+This is not recommended when playing multiple matches, as it is slow and images will be replaced by later runs.
 
 # Getting started
 The referees are written in C#. On Windows the sould run out of the box (Windows XP with service pack 3 or above). If not, check for updates of the .NET framework.
