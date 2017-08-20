@@ -8,21 +8,28 @@ class BackToTheCodeReferee
 {
 	public static void Main(string[] args)
 	{
-		string path = args.Length == 1 ? args[0] : null;
-		string line = Console.ReadLine();
-		int playerCount = int.Parse(line.Split()[1]);
-		Board board = new Board(playerCount);
-		int tick = 0;
-		while (board.Tick ()) {
-			tick++;
-			if (path != null)
-			{
-				Bitmap bmp = board.Draw();
-				bmp.Save(path + System.IO.Path.DirectorySeparatorChar + $"{tick:000}.png");
-				bmp.Dispose();
+		string path = args.Length == 1 ? args [0] : null;
+
+		int seed = -1;
+		while (true) {
+			string[] lineParts = Console.ReadLine ().Split ();
+			if (lineParts [0] == "###Seed")
+				seed = int.Parse (lineParts [1]);
+			else if (lineParts [0] == "###Start") {
+				int playerCount = int.Parse (lineParts [1]);
+				Board board = new Board (playerCount, seed);
+				int tick = 0;
+				while (board.Tick ()) {
+					tick++;
+					if (path != null) {
+						Bitmap bmp = board.Draw ();
+						bmp.Save (path + System.IO.Path.DirectorySeparatorChar +$"{tick:000}.png");
+						bmp.Dispose ();
+					}
+				}
+				Console.WriteLine (board.Ranking ());
 			}
 		}
-		Console.WriteLine (board.Ranking ());
 	}
 }
 
@@ -36,9 +43,9 @@ class Board
 	List<Field> allFields = new List<Field>();
 	private int round = 0;
 
-	public Board(int playerCount)
+	public Board(int playerCount, int seed)
 	{
-		Random random = new Random();
+		Random random = seed >= 0 ? new Random (seed) : new Random ();
 		for (int i = 0; i < playerCount; i++) {
 			players.Add(new Player(i, random.Next(WIDTH), random.Next(HEIGHT)));
 		}
@@ -47,6 +54,12 @@ class Board
 				grid[x, y] = new Field(x, y);
 				allFields.Add (grid [x, y]);
 			}
+		}
+
+		foreach (Player p in players) {
+			if (players.Any(q => p != q && p.X == q.X && p.Y == q.Y))
+				continue;
+			grid[p.X, p.Y].Conquer(p.ID, round);
 		}
 	}
 

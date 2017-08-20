@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -7,23 +7,28 @@ class TheGreatEscapeReferee
 {
 	public static void Main(string[] args)
 	{
-		string path = args.Length == 1 ? args[0] : null;
+		string path = args.Length == 1 ? args [0] : null;
 
-		int playerCount = int.Parse(Console.ReadLine().Split()[1]);
+		int seed = -1;
+		while (true) {
+			string[] lineParts = Console.ReadLine ().Split ();
+			if (lineParts [0] == "###Seed")
+				seed = int.Parse (lineParts [1]);
+			else if (lineParts [0] == "###Start") {
+				int playerCount = int.Parse (lineParts [1]);
+				Board board = new Board (playerCount, seed);
+				if (path != null) {
+					Bitmap bmp = board.Draw ();
+					bmp.Save (path + System.IO.Path.DirectorySeparatorChar + "000.png");
+					bmp.Dispose ();
+				}
 
-		Board board = new Board(playerCount);
-		if (path != null)
-		{
-			Bitmap bmp = board.Draw();
-			bmp.Save(path + System.IO.Path.DirectorySeparatorChar + "000.png");
-			bmp.Dispose();
+				while (board.Play ()) {
+					board.Tick (path);
+				}
+				board.DeclareWinner ();
+			}
 		}
-
-		while (board.Play())
-		{
-			board.Tick(path);
-		}
-		board.DeclareWinner();
 	}
 
 	class Board
@@ -45,8 +50,9 @@ class TheGreatEscapeReferee
 		private static int[,] offset = new int[,] { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } };
 		private static string[] directions = new string[] { "DOWN", "RIGHT", "UP", "LEFT" };
 
-		public Board(int playerCount)
+		public Board(int playerCount, int seed)
 		{
+			if (seed >= 0) random = new Random(seed);
 			this.playerCount = playerCount;
 			for (int i = 0; i < playerCount; i++)
 			{
