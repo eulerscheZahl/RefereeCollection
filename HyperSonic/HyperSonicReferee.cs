@@ -1,9 +1,65 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+
+
+class JavaRandom {
+		public uint next(uint bits)
+		{
+			seed = (seed * 0x5DEECE66DLL + 0xBLL) & ((1LL << 48) - 1);
+			return (uint)(seed >> (int)(48 - bits));
+		}
+
+		ulong seed;
+
+		public static ulong CurrentTimeMillis()
+		{
+			DateTime Jan1st1970 = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+			return (ulong) (DateTime.UtcNow - Jan1st1970).TotalMilliseconds;
+		}		
+		public void setSeed(ulong _seed)
+		{
+			seed = (_seed ^ 0x5DEECE66DLL) & ((1LL << 48) - 1);
+		}
+		public JavaRandom()
+		{
+			setSeed(CurrentTimeMillis());
+		}
+		public JavaRandom(ulong _seed)
+		{
+			setSeed(_seed);
+		}
+		public int nextInt()
+		{
+			return (int)next(32);
+		}
+
+		public	int nextInt(int n)
+		{
+			if ((n & -n) == n) // i.e., n is a power of 2
+				return (int)(((ulong)n * (ulong)next(31)) >> 31);
+			int bits, val;
+			do
+			{
+				bits = (int)next(31);
+				val = bits % n;
+			} while (bits - val + (n - 1) < 0);
+			return val;
+		}
+		public long nextLong()
+		{
+			return (long)(((ulong)next(32) << 32) + (ulong)next(32));
+		}
+		public bool nextBoolean()
+		{
+			return next(1) != 0;
+		}
+
+	};
+
 
 class Referee
 {
@@ -17,9 +73,24 @@ class Referee
 	public static void Main(string[] args)
 	{
 		string path = args.Length == 1 ? args[0] : null;
-		string start = Console.ReadLine (); //e.g. ###Start 4
-		int players = int.Parse (start.Split () [1]);
-		Board board = new Board(new Random(), players);
+		int players =2;		
+		string start = Console.ReadLine ();
+		JavaRandom random = new JavaRandom();
+		ulong seed = (ulong)random.nextInt(999999999);
+		try {
+			if (start.StartsWith("###Seed")) {
+				seed = ulong.Parse( start.Substring(8));
+				Console.Error.WriteLine("Using seed:"+seed);
+				random = new JavaRandom(seed);
+				start = Console.ReadLine (); 
+			}
+			players = int.Parse (start.Split () [1]);
+		} catch (Exception e) {
+			Console.Error.WriteLine ("Invalid parameter '"+start+"': "+e);
+			return;
+		}
+		
+		Board board = new Board(random, players);
 		Players = board.players;
 		int round = 0;
 		while (board.Play()) {
@@ -94,7 +165,7 @@ class Player
 		if (x < 0 || x >= Board.WIDTH || y < 0 || y >= Board.HEIGHT) {
 			Console.Error.WriteLine ("###Error " + ID + " Lost invalid target: " + x + "/" + y);
 			Dead = true;
-			return;			
+			return;
 		}
 
 		int distToTarget = Math.Abs(x - Location.X) + Math.Abs(y - Location.Y);
@@ -131,7 +202,7 @@ class Board
 		return players.Count(p => !p.Dead) > 1 && round < MAX_ROUNDS;
 	}
 
-	public Board(Random random, int playerCount)
+	public Board(JavaRandom random, int playerCount)
 	{
 		Grid = new Field[WIDTH, HEIGHT];
 		for (int x = 0; x < WIDTH; x++) {
@@ -147,23 +218,60 @@ class Board
 			players.Add(new Player(i, this));
 		}
 
-		int boxes = random.Next(MIN_BOXES, MAX_BOXES + 1);
-		if (boxes % 2 == 1) {
-			boxes--;
-			Grid[WIDTH / 2, HEIGHT / 2].SetBox(random.NextDouble());
-		}
-		for (int repeat = 0; repeat < 1000 && boxes > 0; repeat++) {
-			int x = random.Next(WIDTH / 2 + 1);
-			int y = random.Next(HEIGHT / 2 + 1);
+		int boxCount = 30 + random.nextInt(36);
+		int[] toDistribute = new int[2]{boxCount / 3,boxCount / 3};
+		
+		List<Field> startingPositions = new List<Field>(){Grid[0,0],Grid[0,HEIGHT-1],Grid[WIDTH-1,HEIGHT-1],Grid[WIDTH-1,0]};
+
+		int iterations = 0;
+		int boxId = 0;
+		while (boxId < boxCount) {
+			iterations++;
+
+			if (iterations > 1000) {
+				break;
+			}
+
+			int x = random.nextInt(WIDTH);
+			int y = random.nextInt(HEIGHT);
+
+			bool ok = true;
+			foreach (var p in startingPositions) {
+				if ((Math.Abs(p.X - x) + Math.Abs(p.Y - y)) < 2)
+				{
+					ok = false;
+					break;
+				}
+			}
+			if (!ok) continue;
 			if (Grid[x, y].Wall || Grid[x, y].Box)
 				continue;
-			Field[] toAdd = SymmetricFields(x, y).ToArray();
-			if (toAdd.Length > boxes)
-				continue;
-			boxes -= toAdd.Length;
-			double d = random.NextDouble();
-			foreach (Field f in toAdd)
-				f.SetBox(d);
+
+			Grid[x, y].Box = true;
+			for (int i=0;i<2;++i){
+				if (toDistribute[i] >0)
+				{
+					Grid[x, y].PowerUp = new PowerUp { ExtraRange = (i==0),ExtraBomb = (i!=0), field = Grid[x, y] };
+					--toDistribute[i];
+					break;
+				}
+			}
+			
+			
+			++boxId;
+			List<Field> otherCells = new List<Field>(){ Grid[WIDTH - x - 1,y ],Grid[WIDTH - x - 1,HEIGHT - y - 1],Grid[x,HEIGHT - y - 1]};
+			foreach (var c in otherCells){
+				if (!c.Wall && !c.Box)
+				{
+					c.Box = true;
+					++boxId;
+					if (Grid[x, y].PowerUp != null)
+					{
+						c.PowerUp = new PowerUp { ExtraRange = Grid[x, y].PowerUp.ExtraRange,ExtraBomb = Grid[x, y].PowerUp.ExtraBomb, field = c };
+						--toDistribute[c.PowerUp.ExtraRange?0:1];
+					}
+				}
+			}
 		}
 	}
 
@@ -326,12 +434,6 @@ class Field
 		}
 	}
 
-	public void SetBox(double d)
-	{
-		this.Box = true;
-		this.PowerUp = PowerUp.Create(d, this);
-	}
-
 	public override string ToString()
 	{
 		if (Wall)
@@ -349,28 +451,17 @@ class Field
 
 class PowerUp
 {
-	private static readonly double EXTRA_RANGE_PROBABILITY = 0.3;
-	private static readonly double EXTRA_BOMB_PROBABILITY = 0.3;
-	public bool ExtraRange { get; private set; }
-	public bool ExtraBomb { get; private set; }
-	private Field field;
+	public bool ExtraRange { get; set; }
+	public bool ExtraBomb { get; set; }
+	public Field field;
 
-	private PowerUp()
+	public PowerUp()
 	{
-	}
-
-	public static PowerUp Create(double d, Field field)
-	{
-		if (d < EXTRA_RANGE_PROBABILITY)
-			return new PowerUp { ExtraRange = true, field = field };
-		if (d < EXTRA_BOMB_PROBABILITY + EXTRA_RANGE_PROBABILITY)
-			return new PowerUp { ExtraBomb = true, field = field };
-		return null;
 	}
 
 	public override string ToString()
 	{
-		return "2 0 " + field.X + " " + field.Y + " " + (ExtraRange ? "1" : "2") + " 0";
+		return "2 0 " + field.X + " " + field.Y + " " + (ExtraRange ? "1" : "2") + " " + (ExtraRange ? "1" : "2");
 	}
 }
 
