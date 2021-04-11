@@ -1,3 +1,7 @@
+# Official referees
+After I wrote those referees, the real ones used by CodinGame were leaked [here](https://github.com/SpiritusSancti5/codinGame/tree/master/Referees).
+Those are the single source of truth if you want to understand how the game really works.
+
 # CodinGame Referee Collection
 This is an unofficial collection of referee programs for CodinGame multiplayer games, compatible to [brutaltester](https://github.com/dreignier/cg-brutaltester).
 The referees are not ported from the code used on the servers, so correctness can't be garanteed. This applied especially for, but is not limited to map generation.
