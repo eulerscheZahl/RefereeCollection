@@ -84,16 +84,31 @@ private void Simulate()
 			}
 			else
 			{
-				Chips.Remove(c1);
-				Chips.Remove(c2);
-
 				double x = c1.X + (c2.X - c1.X) * m2 / (m1 + m2);
 				double y = c1.Y + (c2.Y - c1.Y) * m2 / (m1 + m2);
 				double vx = (c1.VX * m1 + c2.VX * m2) / (m1 + m2);
 				double vy = (c1.VY * m1 + c2.VY * m2) / (m1 + m2);
-				Chip combined = new Chip(c1.Radius > c2.Radius ? c1.Player : c2.Player, c1.Radius > c2.Radius ? c1.ID : c2.ID, x, y, vx, vy, Math.Sqrt(m1 + m2));
-				combined.Move(epsilon); //get away from edge
-				Chips.Add(combined);
+
+				if (c1.Radius > c2.Radius)
+				{
+						c1.X = x;
+						c1.Y = y;
+						c1.VX = vx;
+						c1.VY = vy;
+						c1.Radius = Math.Sqrt(m1 + m2);
+						c1.Move(epsilon); //get away from edge
+						Chips.Remove(c2);
+				}
+				else
+				{
+						c2.X = x;
+						c2.Y = y;
+						c2.VX = vx;
+						c2.VY = vy;
+						c2.Radius = Math.Sqrt(m1 + m2);
+						c2.Move(epsilon); //get away from edge
+						Chips.Remove(c1);
+				}
 			}
 		}
 	}
@@ -167,4 +182,3 @@ class Chip
 		}
 	}
 }
-
